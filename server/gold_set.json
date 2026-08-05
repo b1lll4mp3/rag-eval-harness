@@ -21,7 +21,7 @@
     "ground_truth": "The inference GPU has 12 GB of VRAM.",
     "source": "inference-host-overview.md",
     "key_facts": [["12 gb", "12gb"]],
-    "notes": "The classic hallucination target — a confident wrong number here is exactly what the eval must catch."
+    "notes": "The classic hallucination target. A confident wrong number here is exactly what the eval must catch."
   },
   {
     "id": 4,
