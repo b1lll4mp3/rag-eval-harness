@@ -1,0 +1,84 @@
+<!doctype html><html><head><meta charset="utf-8"><title>RAG Test Runner</title>
+<style>
+ body{font-family:system-ui;margin:2rem;max-width:70rem}
+ nav button{margin-right:.5rem} .tab{display:none} .tab.active{display:block}
+ table{border-collapse:collapse} td,th{border:1px solid #ccc;padding:.3rem .6rem}
+ .err{color:#8a2620} .ok{color:#3a6b52}
+</style></head><body>
+<h1>RAG Test Runner</h1>
+<nav>
+ <button data-tab="status">Status</button><button data-tab="run">Run</button>
+ <button data-tab="history">History</button><button data-tab="compare">Compare</button>
+</nav>
+<div id="status" class="tab active"></div>
+<div id="run" class="tab">
+ <select id="suite"><option>latency</option><option>eval</option><option>model_compare</option></select>
+ <select id="model"></select>
+ <select id="mode"><option value="">current mode</option><option>rag</option><option>code</option></select>
+ <button id="go">Run</button><pre id="progress"></pre>
+</div>
+<div id="history" class="tab"></div>
+<div id="compare" class="tab">
+ <select id="runA"></select><select id="runB"></select>
+ <button id="cmp">Compare</button>
+ <button id="copymd">Copy markdown summary</button>
+ <pre id="cmpout"></pre>
+</div>
+<script>
+const $=q=>document.querySelector(q);
+const j=async(u,opts)=>{const r=await fetch(u,opts);if(!r.ok)throw new Error(r.status+" "+await r.text());return r.json()};
+const jt=async(u,opts)=>{const r=await fetch(u,opts);if(!r.ok)throw new Error(r.status+" "+await r.text());return r.text()};
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+ $("#"+b.dataset.tab).classList.add("active");});
+async function status(){const s=await j("/api/status");
+ $("#status").innerHTML=`<p>Mode: <b>${esc(s.mode)}</b> · reranker ${s.reranker_up?"<span class=ok>up</span>":"<span class=err>DOWN</span>"} · VRAM ${esc(s.vram||"?")} · run active: ${s.run_active}</p>
+ <p>Resident: ${(s.resident||[]).map(m=>esc(m.name)).join(", ")||"none"}</p>
+ <button onclick="setMode('rag')">rag mode</button> <button onclick="setMode('code')">code mode</button>`;}
+async function setMode(m){try{await j("/api/mode",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:m})});status();}catch(e){const msg=e.message.includes("409")?"Cannot toggle mode: a run is active.":e.message;$("#status").insertAdjacentHTML("beforeend",`<p class=err>${esc(msg)}</p>`);}}
+async function models(){const d=await j("/api/models");$("#model").innerHTML=d.models.map(m=>`<option>${esc(m)}</option>`).join("");}
+$("#go").onclick=async()=>{
+ const body={suite:$("#suite").value,model:$("#model").value};
+ // rag-uploader ignores request-level model (probed 2026-07-30) — swaps need env restarts
+ if(body.suite==="model_compare")body.swap_mode="env";
+ if($("#mode").value)body.mode=$("#mode").value;
+ try{const r=await j("/api/run",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  poll(r.run_id);}catch(e){$("#progress").textContent=e.message.includes("409")?"A run is already active.":e.message;}};
+async function poll(id){const r=await j("/api/runs/"+id);
+ $("#progress").textContent=JSON.stringify({status:r.status,fact_recall:r.fact_recall,median_latency_s:r.median_latency_s,error:r.error},null,1);
+ if(r.status==="running")setTimeout(()=>poll(id),5000);else history_();}
+async function history_(){const d=await j("/api/runs");
+ $("#history").innerHTML="<table><tr><th>id</th><th>started</th><th>suite</th><th>mode</th><th>model</th><th>fact_recall</th><th>median s</th><th>status</th></tr>"+
+ d.runs.map(r=>`<tr><td>${esc(r.run_id)}</td><td>${esc(r.started)}</td><td>${esc(r.suite)}</td><td>${esc(r.mode||"")}</td><td>${esc(r.model||"")}</td><td>${esc(r.fact_recall??"")}</td><td>${esc(r.median_latency_s??"")}</td><td>${esc(r.status)}</td></tr>`).join("")+"</table>";
+ const opts=d.runs.map(r=>`<option value="${esc(r.run_id)}">${esc(r.started)} ${esc(r.suite)} ${esc(r.model||"")}</option>`).join("");
+ $("#runA").innerHTML=opts;$("#runB").innerHTML="<option value=''>—</option>"+opts;}
+$("#cmp").onclick=async()=>{try{
+ const idA=$("#runA").value, idB=$("#runB").value;
+ let out=await jt("/api/runs/"+idA+"/markdown");
+ if(idB){out+="\n\n---\n\n"+await jt("/api/runs/"+idB+"/markdown");}
+ const full=await j("/api/runs/"+idA);
+ if(full.baseline&&full.baseline.questions&&full.questions){
+  const baseById={};full.baseline.questions.forEach(q=>baseById[q.id]=q);
+  const lines=[];
+  full.questions.forEach(q=>{
+   if(q.id in baseById)lines.push(`id ${q.id}: baseline ${baseById[q.id].fact_recall} vs candidate ${q.fact_recall}`);
+  });
+  if(lines.length)out+="\n\n"+lines.join("\n");
+ }
+ $("#cmpout").textContent=out;
+}catch(e){$("#cmpout").textContent=e.message;}};
+$("#copymd").onclick=()=>{
+ const text=$("#cmpout").textContent;
+ if(navigator.clipboard&&window.isSecureContext){
+  navigator.clipboard.writeText(text).catch(()=>fallbackCopy(text));
+ }else{fallbackCopy(text);}
+};
+function fallbackCopy(text){
+ const ta=document.createElement("textarea");
+ ta.value=text;ta.style.position="fixed";ta.style.opacity="0";
+ document.body.appendChild(ta);ta.select();
+ try{document.execCommand("copy");}finally{document.body.removeChild(ta);}
+}
+status();models();history_();setInterval(status,10000);
+</script></body></html>

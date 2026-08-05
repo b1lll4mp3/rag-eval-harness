@@ -1,0 +1,48 @@
+[
+  {
+    "id": 1,
+    "question": "What port does the widget service listen on?",
+    "ground_truth": "The widget service listens on port 7180 on apps.homelab.example (192.0.2.20).",
+    "source": "widget-service-runbook.md",
+    "key_facts": [["7180"]],
+    "notes": "Single-token numeric fact; boundary matching must not match 7180 inside 71800."
+  },
+  {
+    "id": 2,
+    "question": "Which host runs the metrics database?",
+    "ground_truth": "The metrics database runs in the metricsdb container on db01 at 192.0.2.30.",
+    "source": "metrics-db-runbook.md",
+    "key_facts": [["192.0.2.30", "db01"], ["metricsdb"]],
+    "notes": "Each inner list is a set of acceptable alternatives; either the IP or the hostname earns the first fact."
+  },
+  {
+    "id": 3,
+    "question": "How much VRAM does the inference server's GPU have?",
+    "ground_truth": "The inference GPU has 12 GB of VRAM.",
+    "source": "inference-host-overview.md",
+    "key_facts": [["12 gb", "12gb"]],
+    "notes": "The classic hallucination target — a confident wrong number here is exactly what the eval must catch."
+  },
+  {
+    "id": 4,
+    "question": "When does the nightly backup job run?",
+    "ground_truth": "The nightly backup runs at 02:30 via cron on the storage host.",
+    "source": "backup-runbook.md",
+    "key_facts": [["02:30", "2:30"]]
+  },
+  {
+    "id": 5,
+    "question": "What terminates TLS for internal services?",
+    "ground_truth": "Traefik on gateway.homelab.example terminates TLS, listening on port 8443.",
+    "source": "reverse-proxy-runbook.md",
+    "key_facts": [["traefik"], ["8443"]]
+  },
+  {
+    "id": 6,
+    "question": "What is the address of the internal DNS resolver?",
+    "ground_truth": "The internal DNS resolver is at 192.0.2.53.",
+    "source": "network-overview.md",
+    "key_facts": [["192.0.2.53"]],
+    "notes": "Dotted-quad matching: the trailing sentence period must not break the match, and 53 alone must never count."
+  }
+]
