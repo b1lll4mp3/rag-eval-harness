@@ -10,7 +10,7 @@ independent ways:
 
   correctness  LLM judge (Ollama qwen2.5:7b-instruct) grading 0.0/0.5/1.0 on
                whether the answer asserts the same thing as ground_truth.
-               Noisy in absolute terms — use it to compare runs, not to grade.
+               Noisy in absolute terms, so use it to compare runs, not to grade.
 
 Plus a `refusal` flag, which separates "retrieval found nothing" from
 "retrieval found the wrong thing".
@@ -70,7 +70,7 @@ JUDGE_SYSTEM = (
     "Contradicting a number or an identifier IS."
 )
 
-# (reference, candidate, expected_score) — the judge must get these right or we abort.
+# (reference, candidate, expected_score). The judge must get these right or we abort.
 JUDGE_SELF_TEST = [
     ("The GPU is an RTX 5070 Ti with 16 GB VRAM.",
      "the server has an NVIDIA RTX 5070 Ti, 16GB of video memory.", 1.0),
@@ -97,7 +97,7 @@ def post_json(url, payload, timeout=180, retries=2):
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 return json.loads(resp.read().decode("utf-8", "replace"))
         except urllib.error.HTTPError as exc:
-            # 4xx is a request problem (wrong model name, bad path) — retrying
+            # 4xx is a request problem (wrong model name, bad path), so retrying
             # just triples the wait before showing the same error.
             if 400 <= exc.code < 500:
                 raise RuntimeError(f"POST {url} -> HTTP {exc.code} {exc.reason}") from exc
@@ -116,7 +116,7 @@ def ask_rag(question, cfg):
         "model": cfg["rag_model"],
         "messages": [{"role": "user", "content": question}],
         "stream": False,
-        # temperature 0 so runs are comparable — the answer path samples otherwise,
+        # temperature 0 so runs are comparable. The answer path samples otherwise,
         # and three same-state runs spread 0.577-0.712 before this was pinned
         "temperature": 0,
     }, timeout=cfg["timeout"])
@@ -146,7 +146,7 @@ def judge(reference, candidate, cfg):
         }, timeout=cfg["timeout"])
     except RuntimeError as exc:
         # Never let a judge outage take down a run that has already spent real
-        # minutes querying the RAG stack — the deterministic scores still stand.
+        # minutes querying the RAG stack. The deterministic scores still stand.
         return None, f"judge unreachable: {exc}"
 
     raw = data.get("message", {}).get("content", "").strip()
@@ -218,7 +218,7 @@ def run_self_test(cfg):
         score, reason = judge(reference, candidate, cfg)
         ok = score is not None and abs(score - expected) < 0.01
         print(f"  [{'PASS' if ok else 'FAIL'}] expected {expected} got {score}"
-              f"  — {candidate[:52]!r}", flush=True)
+              f"  on {candidate[:52]!r}", flush=True)
         if not ok:
             failures.append((candidate, expected, score, reason))
     if failures:
@@ -280,7 +280,7 @@ def build_markdown(payload, prior):
     lines = [
         "# RAG Eval Report",
         "",
-        f"*Run {payload['run_id']} — {payload['started_utc']}*",
+        f"*Run {payload['run_id']}, {payload['started_utc']}*",
         "",
         f"- System under test: `{payload['config']['rag_model']}` @ `{payload['config']['rag_url']}`",
         f"- Judge: `{payload['config']['judge_model']}` @ `{payload['config']['judge_url']}`",
@@ -306,8 +306,8 @@ def build_markdown(payload, prior):
         ps = prior["summary"]
         lines += [f"### Change vs previous run (`{prior['run_id']}`)", ""]
         if ps["total"] != s["total"]:
-            lines += [f"> Different question counts ({ps['total']} vs {s['total']}) — "
-                      "these deltas are not comparable. Re-run the same selection.", ""]
+            lines += [f"> Different question counts ({ps['total']} vs {s['total']}). "
+                      "These deltas are not comparable. Re-run the same selection.", ""]
         for name in ("fact_recall", "correctness"):
             before, after = ps.get(name), s.get(name)
             if before is None or after is None:
@@ -321,7 +321,7 @@ def build_markdown(payload, prior):
                 and abs(r["fact_recall"] - r["correctness"]) > 0.5]
     if disagree:
         lines += [
-            "## Needs human review — the two scorers disagree",
+            "## Needs human review: the two scorers disagree",
             "",
             "Deterministic and judge scores differ by more than 0.5. Usually means either the "
             "`key_facts` list is wrong, or the judge is being fooled.",
@@ -341,9 +341,9 @@ def build_markdown(payload, prior):
         "|---|---|---|---|---|---|",
     ]
     for r in payload["results"]:
-        fr = "—" if r.get("fact_recall") is None else f"{r['fact_recall']:.2f}"
-        co = "—" if r.get("correctness") is None else f"{r['correctness']:.2f}"
-        missed = ", ".join(r.get("missed_facts", []))[:48] or "—"
+        fr = "n/a" if r.get("fact_recall") is None else f"{r['fact_recall']:.2f}"
+        co = "n/a" if r.get("correctness") is None else f"{r['correctness']:.2f}"
+        missed = ", ".join(r.get("missed_facts", []))[:48] or "n/a"
         flag = "yes" if r.get("refused") else ""
         lines.append(f"| {r['id']} | {fr} | {co} | {flag} | {missed} | {r['question'][:56]} |")
 
@@ -353,7 +353,7 @@ def build_markdown(payload, prior):
     if failures:
         lines += ["", "## Failures in detail", ""]
         for r in failures:
-            lines += [f"### id {r['id']} — {r['question']}", ""]
+            lines += [f"### id {r['id']}: {r['question']}", ""]
             if r.get("error"):
                 lines += [f"**ERROR:** `{r['error']}`", ""]
                 continue
@@ -361,7 +361,7 @@ def build_markdown(payload, prior):
                 f"- **expected:** {r['ground_truth']}",
                 f"- **got:** {r['answer'][:500]}",
                 f"- **missed facts:** {', '.join(r.get('missed_facts', [])) or 'none'}",
-                f"- **judge:** {r.get('judge_reason', '—')}",
+                f"- **judge:** {r.get('judge_reason', 'n/a')}",
                 f"- **source doc:** `{r.get('source', '?')}`",
                 "",
             ]
@@ -438,8 +438,8 @@ def main():
             row.update(correctness=score, judge_reason=reason)
 
         results.append(row)
-        fr_s = "  —  " if fr is None else f"{fr:.2f} "
-        co_s = "  —  " if row.get("correctness") is None else f"{row['correctness']:.2f} "
+        fr_s = " n/a " if fr is None else f"{fr:.2f} "
+        co_s = " n/a " if row.get("correctness") is None else f"{row['correctness']:.2f} "
         print(f"[{i}/{len(gold)}] id {item['id']:>2}  fact {fr_s} judge {co_s}"
               f" {elapsed:5.1f}s{'  REFUSED' if refused else ''}"
               f"{'  missed: ' + ', '.join(missed) if missed else ''}", flush=True)
@@ -450,7 +450,7 @@ def main():
 
     summary = {
         "total": len(results),
-        # None, not 0.0, when nothing could be scored — an outage must not be
+        # None, not 0.0, when nothing could be scored. An outage must not be
         # indistinguishable from the stack answering every question wrong.
         "fact_recall": (sum(scored) / len(scored)) if scored else None,
         "fact_recall_scored": len(scored),
@@ -458,7 +458,7 @@ def main():
                           if r.get("fact_recall") is None and not r.get("error")),
         "correctness": (sum(judged) / len(judged)) if judged else None,
         # Load-bearing, not presentation. A refusal and a confident wrong answer both score 0.00
-        # on fact_recall, and that is not a gap to close — a recall metric structurally cannot
+        # on fact_recall, and that is not a gap to close, because a recall metric structurally cannot
         # represent the difference. This count is the ONLY carrier of it. Question 5 is the worked
         # case: it used to answer "80,000 tokens" with total confidence and now refuses, which is a
         # large improvement that is invisible in the headline number. If this is ever folded into
@@ -476,7 +476,7 @@ def main():
         # 2026-08-03 five runs inside seven minutes produced 0.615/0.635/0.635/0.673/0.712 and
         # nothing on disk recorded which retrieval mode or corpus size each one saw, so the
         # spread could not afterwards be split into "config change" versus "corpus change"
-        # versus "noise" — and the highest of them became the quoted baseline by default.
+        # versus "noise", and the highest of them became the quoted baseline by default.
         # A result that does not carry its own inputs cannot be compared to anything later.
         "corpus": corpus_state(),
         "summary": summary,

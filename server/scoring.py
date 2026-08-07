@@ -1,4 +1,4 @@
-"""Deterministic fact scoring — verbatim port of eval/run_eval.py.
+"""Deterministic fact scoring: verbatim port of eval/run_eval.py.
 
 Any change here MUST be mirrored in eval/run_eval.py and re-baselined:
 two scorers that drift apart make runs incomparable.

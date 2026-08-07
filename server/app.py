@@ -1,4 +1,4 @@
-"""RAG Test Runner — web UI + API on the server :8095. Stdlib only.
+"""RAG Test Runner: web UI + API on the server :8095. Stdlib only.
 
 Run lifecycle: POST /api/run -> 202 {run_id} (409 if one is active) ->
 background thread executes -> GET /api/runs/<id> polls status.
@@ -46,7 +46,7 @@ def save_run(run):
 def execute(run):
     """Full run: snapshot regime -> optionally change it -> suite -> restore.
     Every scored arm is preceded by a readiness gate for the exact model it is
-    about to score — a cold load absorbed into a scored latency corrupts the run."""
+    about to score, because a cold load absorbed into a scored latency corrupts the run."""
     prior_mode = suites.current_mode()
     want_mode = run.get("mode") or prior_mode
     run["mode"] = want_mode
@@ -54,7 +54,7 @@ def execute(run):
     run["gold_source"] = "none"
     # rag-uploader ignores request-level model overrides (probed 2026-07-30):
     # scoring any non-baseline model requires the env-restart swap path.
-    # Derived server-side only — a client-sent swap_mode could otherwise be
+    # Derived server-side only, because a client-sent swap_mode could otherwise be
     # used to skip the env-restart swap the corpus lane actually requires.
     swap_mode = "env" if run["model"] != suites.BASELINE_MODEL else "request"
     run["swap_mode"] = swap_mode
@@ -101,7 +101,7 @@ def execute(run):
         run["error"] = f"{type(exc).__name__}: {exc} (phase: {run.get('phase')})"
         run["trace"] = traceback.format_exc()[-1500:]
     finally:
-        # model restore and mode restore are independent recoveries — one
+        # model restore and mode restore are independent recoveries, so one
         # failing must not suppress the other's attempt
         errors = []
         if swapped and swap_mode == "env":

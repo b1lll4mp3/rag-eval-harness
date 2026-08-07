@@ -1,5 +1,5 @@
-"""Suite execution. Lane discipline: record the regime on every result —
-a number without its contention regime is uninterpretable."""
+"""Suite execution. Lane discipline: record the regime on every result.
+A number without its contention regime is uninterpretable."""
 import json
 import os
 import statistics
@@ -12,7 +12,7 @@ from scoring import score_facts, is_refusal
 # --- Config ----------------------------------------------------------------
 # Container names, endpoints, and models for YOUR stack. Everything here can
 # be overridden with environment variables so the deployed image never needs
-# editing. The two container names must match `docker ps` exactly — dockerctl
+# editing. The two container names must match `docker ps` exactly: dockerctl
 # addresses containers by name over the socket.
 VLLM = os.environ.get("VLLM_CONTAINER", "vllm")
 RAG_UPLOADER = os.environ.get("RAG_CONTAINER", "rag-uploader")
@@ -56,7 +56,7 @@ def set_mode(mode):
     Returns a list of warning strings (empty when everything unloaded clean)."""
     warnings = []
     if mode == "code":
-        # ANY resident model on the GPU blocks vLLM (~13 GB) from coming up —
+        # ANY resident model on the GPU blocks vLLM (~13 GB) from coming up,
         # not just the baseline, since a model_compare run may have left a
         # candidate model resident. Unload everything Ollama is holding; in
         # code mode Ollama reloads what it needs with CPU placement on demand.
@@ -77,7 +77,7 @@ def set_mode(mode):
         if not dockerctl.container_running(VLLM):
             dockerctl.start(VLLM)
         elif not probe(VLLM_MODELS):
-            # container reports running but the models endpoint is dead —
+            # container reports running but the models endpoint is dead:
             # wedged in place (same failure shape as the known Ollama NVML
             # wedge). Restart once.
             dockerctl.stop(VLLM)
@@ -92,7 +92,7 @@ def set_mode(mode):
         if dockerctl.container_running(VLLM):
             dockerctl.stop(VLLM)
         # the baseline model may still be loaded with CPU placement from code
-        # mode — Ollama keeps the existing instance until unloaded, so queries
+        # mode. Ollama keeps the existing instance until unloaded, so queries
         # would stay on CPU and can blow the timeout cap. Force an unload; the
         # readiness gate's warm-up then reloads it onto the freed GPU.
         try:
@@ -126,7 +126,7 @@ def readiness_gate(model=None, post=None):
 
 def swap_model(model, swap_mode, post=None):
     """'request' passes the model per-query, but the backend may still
-    cold-load its weights — warm up so the load is never absorbed into a
+    cold-load its weights. Warm up so the load is never absorbed into a
     scored latency."""
     if swap_mode == "request":
         readiness_gate(model, post=post)
@@ -178,7 +178,7 @@ def run_suite(run, gold, post=None):
 def markdown_summary(run, baseline=None):
     fr = f"{run['fact_recall']:.3f}" if run.get("fact_recall") is not None else "n/a"
     lines = [
-        f"### RAG run {run.get('started', '')} — {run.get('suite', '?')}, "
+        f"### RAG run {run.get('started', '')}: {run.get('suite', '?')}, "
         f"{run.get('mode', '?')} mode, model `{run.get('model', '?')}`",
         "",
         f"| metric | value |",
@@ -200,6 +200,6 @@ def markdown_summary(run, baseline=None):
             delta_lat = "latency n/a"
         lines.append(f"| vs baseline `{baseline.get('model', '?')}` | {delta_fr}, {delta_lat} |")
     lines.append("")
-    lines.append(f"*{run.get('mode', '?')} mode — numbers are only comparable to runs "
+    lines.append(f"*{run.get('mode', '?')} mode: numbers are only comparable to runs "
                  "measured under the same lane split and contention regime.*")
     return "\n".join(lines)

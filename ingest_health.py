@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Corpus health check for the server's RAG — and the fix for silent ingestion failure.
+"""Corpus health check for the server's RAG, and the fix for silent ingestion failure.
 
 The problem this exists for: on 2026-07-21 the RAG had been answering homelab
 questions from a June snapshot because `notes/current-infra-status.md`
@@ -16,7 +16,7 @@ Read-only by default. `--sync` uploads MISSING files only.
 
 Safety: this tool never deletes and never overwrites. Re-uploading an already
 indexed file is deliberately NOT automatic, because the ingestion template has a
-known "Delete Previous Vectors" bug — re-ingesting duplicates chunks rather than
+known "Delete Previous Vectors" bug: re-ingesting duplicates chunks rather than
 replacing them. STALE files are therefore reported, not fixed; use
 --sync-stale only when you have accepted that duplicate risk.
 
@@ -117,15 +117,15 @@ def main():
           f"{len(processed)} in processed/\n")
 
     if ghosts:
-        print(f"GHOST ({len(ghosts)}) — processed but zero chunks. Ingestion failed silently:")
+        print(f"GHOST ({len(ghosts)}): processed but zero chunks. Ingestion failed silently:")
         for n in ghosts:
             print(f"  {n}")
     if missing:
-        print(f"\nMISSING ({len(missing)}) — local doc never ingested:")
+        print(f"\nMISSING ({len(missing)}): local doc never ingested:")
         for n in missing:
             print(f"  {n}")
     if stale:
-        print(f"\nSTALE ({len(stale)}) — edited after indexing, RAG serves the old text:")
+        print(f"\nSTALE ({len(stale)}): edited after indexing, RAG serves the old text:")
         for n, i, e in stale:
             print(f"  {n}  indexed {i:%Y-%m-%d}, edited {e:%Y-%m-%d}")
     if pending:

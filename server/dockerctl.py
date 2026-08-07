@@ -1,6 +1,6 @@
 """Minimal Docker Engine API client over /var/run/docker.sock. Stdlib only.
 
-No delete endpoints on purpose — this module can start, stop, inspect and
+No delete endpoints on purpose: this module can start, stop, inspect and
 exec, and nothing else.
 """
 import json
@@ -13,7 +13,7 @@ API = "/v1.41"
 
 def build_request(method, path, body=None):
     payload = b""
-    # Connection: close is load-bearing — the reader drains until the peer
+    # Connection: close is load-bearing, since the reader drains until the peer
     # closes, and Docker's default keep-alive would block recv until timeout.
     headers = [f"{method} {API}{path} HTTP/1.1", "Host: docker",
                "Connection: close"]
@@ -86,7 +86,7 @@ def exec_in(name, cmd):
 
 
 def restart_with_env(name, env_overrides):
-    """Recreate a container with modified env. Rename-only strategy — no delete
+    """Recreate a container with modified env. Rename-only strategy: no delete
     paths, no fixed alias names, so repeat swaps can never collide: each swap
     parks the old container as {name}-old-<unix-ts>. Stale parked containers
     accumulate stopped and harmless; prune them manually if they bother you.
@@ -110,7 +110,7 @@ def restart_with_env(name, env_overrides):
     old = f"{name}-old-{ts}"
     status, _ = docker_request("POST", f"/containers/{name}/rename?name={old}")
     if status != 204:
-        # nothing has been touched yet — the live container keeps running
+        # nothing has been touched yet, so the live container keeps running
         raise RuntimeError(f"rename {name} -> {old} refused: HTTP {status}")
     try:
         stop(old)
@@ -119,7 +119,7 @@ def restart_with_env(name, env_overrides):
             raise RuntimeError(f"create {name} -> HTTP {status}: {data}")
         start(name)
     except Exception:
-        # a failed create may still have claimed the name — shove it aside
+        # a failed create may still have claimed the name, so shove it aside
         docker_request("POST", f"/containers/{name}/rename?name={name}-broken-{ts}")
         status, _ = docker_request("POST", f"/containers/{old}/rename?name={name}")
         if status != 204:

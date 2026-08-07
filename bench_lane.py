@@ -2,14 +2,14 @@
 """Client-side stopwatch benchmark for an OpenAI-compatible lane.
 
 Measures what one person at a keyboard actually feels. The engine's own
-throughput numbers are never trusted — only its token counts, timed here.
+throughput numbers are never trusted, only its token counts, timed here.
 
   ttft         request sent -> first content token
   decode tok/s (completion_tokens - 1) / (last token time - first token time)
   prefill      measured separately, with a UNIQUE prompt per run so vLLM's
                automatic prefix caching cannot serve a cache hit and make
                prefill look instant. (A naive repeated-prompt probe reported
-               53 ms for 3.6k tokens on 2026-07-21 — that was a cache hit,
+               53 ms for 3.6k tokens on 2026-07-21, but that was a cache hit,
                not prefill.)
 
 Baseline measured 2026-07-21 on Qwen2.5-Coder-7B-Instruct-AWQ @ localhost:8010:
@@ -50,8 +50,8 @@ def unique_long_prompt(approx_tokens=3000):
     """A long prompt that is different on every call.
 
     Random letter strings defeat prefix caching; without this the prefill
-    measurement is meaningless. They also tokenize badly on purpose — a
-    gibberish "word" costs roughly 2.6 tokens, not the ~1.3 of real English —
+    measurement is meaningless. They also tokenize badly on purpose: a
+    gibberish "word" costs roughly 2.6 tokens, not the ~1.3 of real English,
     so this uses that ratio. The real prompt_tokens is always read back from
     the usage block rather than trusted from this estimate.
     """

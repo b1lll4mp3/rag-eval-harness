@@ -40,7 +40,7 @@ async function setMode(m){try{await j("/api/mode",{method:"POST",headers:{"Conte
 async function models(){const d=await j("/api/models");$("#model").innerHTML=d.models.map(m=>`<option>${esc(m)}</option>`).join("");}
 $("#go").onclick=async()=>{
  const body={suite:$("#suite").value,model:$("#model").value};
- // rag-uploader ignores request-level model (probed 2026-07-30) — swaps need env restarts
+ // rag-uploader ignores request-level model (probed 2026-07-30): swaps need env restarts
  if(body.suite==="model_compare")body.swap_mode="env";
  if($("#mode").value)body.mode=$("#mode").value;
  try{const r=await j("/api/run",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
@@ -52,7 +52,7 @@ async function history_(){const d=await j("/api/runs");
  $("#history").innerHTML="<table><tr><th>id</th><th>started</th><th>suite</th><th>mode</th><th>model</th><th>fact_recall</th><th>median s</th><th>status</th></tr>"+
  d.runs.map(r=>`<tr><td>${esc(r.run_id)}</td><td>${esc(r.started)}</td><td>${esc(r.suite)}</td><td>${esc(r.mode||"")}</td><td>${esc(r.model||"")}</td><td>${esc(r.fact_recall??"")}</td><td>${esc(r.median_latency_s??"")}</td><td>${esc(r.status)}</td></tr>`).join("")+"</table>";
  const opts=d.runs.map(r=>`<option value="${esc(r.run_id)}">${esc(r.started)} ${esc(r.suite)} ${esc(r.model||"")}</option>`).join("");
- $("#runA").innerHTML=opts;$("#runB").innerHTML="<option value=''>—</option>"+opts;}
+ $("#runA").innerHTML=opts;$("#runB").innerHTML="<option value=''>none</option>"+opts;}
 $("#cmp").onclick=async()=>{try{
  const idA=$("#runA").value, idB=$("#runB").value;
  let out=await jt("/api/runs/"+idA+"/markdown");
