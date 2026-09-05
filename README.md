@@ -170,4 +170,8 @@ other.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+AGPL-3.0-only. See [LICENSE](LICENSE).
+
+Use it, run it, change it, freely. The one obligation: if you build a service on
+top of it that other people reach over a network, your changes have to be published
+too. Personal and internal use carry no such requirement.
